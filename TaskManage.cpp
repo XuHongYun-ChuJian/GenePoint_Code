@@ -3,6 +3,9 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QDebug>
+#include <QDateTime>
+#include <Common.h>
+
 
 TaskManage::TaskManage(QObject *parent) : QObject(parent)
 {
@@ -10,9 +13,21 @@ TaskManage::TaskManage(QObject *parent) : QObject(parent)
     qRegisterMetaType<TaskGroup>("TaskGroup");
 
     TaskGroup m_taskGroup;
-    loadFile(ConfigFilePath , m_taskGroup);
+    loadFile(TaskConfigFilePath , m_taskGroup);
 
-    qDebug()<< m_taskGroup;
+    fwInfo() << "TaskMange初始化完成！";
+
+    connect(&m_timer, &QTimer::timeout, this , [&](){
+        excuteTask();
+    });
+
+    m_timer.start(1000);
+    fwInfo()<< "任务定时器启动" << m_timer.interval() << m_timer.isActive();
+}
+
+TaskManage::~TaskManage()
+{
+    fwInfo()<< "taskManage 销毁";
 }
 
 void TaskManage::loadFile(const QString &filePath, TaskGroup &taskGroup)
@@ -20,17 +35,17 @@ void TaskManage::loadFile(const QString &filePath, TaskGroup &taskGroup)
     QFile file(filePath);
     if(!file.open(QFile::Text | QFile::ReadOnly))
     {
-        qDebug()<< filePath << "文件打开失败：" << file.errorString();
+        fwErro()<< filePath << "文件打开失败：" << file.errorString();
         return;
     }
 
-    qDebug()<< "文件打开成功";
+    fwInfo() << "文件打开成功";
 
     QJsonParseError jsonError;
     QJsonDocument   docment = QJsonDocument::fromJson(file.readAll() , &jsonError);
     if(docment.isNull())
     {
-        qDebug()<< "Json文件打开失败：" << jsonError.errorString();
+        fwErro()<< "Json文件打开失败：" << jsonError.errorString();
         return;
     }
 
@@ -38,7 +53,7 @@ void TaskManage::loadFile(const QString &filePath, TaskGroup &taskGroup)
     m_jsonObject = jsonObject;
     m_jsonString = docment.toJson();
 
-    qDebug()<< QString(docment.toJson());
+    fwInfo()<< QString(docment.toJson());
 
     taskGroup.groupId = jsonObject.value("groupId").toInt();
     taskGroup.groupName = jsonObject.value("groupName").toString();
@@ -62,6 +77,8 @@ void TaskManage::loadFile(const QString &filePath, TaskGroup &taskGroup)
 
     file.close();
 
+    //ToDo
+    m_willExcuteTasks = taskGroup.tasks;
 }
 
 void TaskManage::setTaskGroup(const TaskGroup &group)
@@ -83,4 +100,27 @@ QJsonObject TaskManage::getJsonObject()
 QString TaskManage::getJsonString()
 {
     return m_jsonString;
+}
+
+void TaskManage::excuteTask()
+{
+    if(m_willExcuteTasks.isEmpty())
+    {
+        fwInfo()<< "当前没有任务";
+        return;
+    }
+
+    for(auto task : m_willExcuteTasks)
+    {
+        if(task.excuteTime.toString("hh:mm:ss") != QTime::currentTime().toString("hh:mm:ss"))
+        {
+            continue;
+        }
+
+        fwInfo()<< "执行任务" << task.taskId << task.excuteTime.toString("hh:mm:ss") << QTime::currentTime().toString("hh:mm:ss");
+        emit sig_SendTaskDetail(task.detail);
+        emit sig_SendTaskTaskName(task.name);
+        emit sig_SendTaskExcuteTime(task.delay);
+//        m_willExcuteTasks.removeOne(task);
+    }
 }

@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/image">
+        <file>时间.png</file>
+    </qresource>
+</RCC>

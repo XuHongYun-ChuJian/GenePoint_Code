@@ -2,13 +2,11 @@
 #define TASKMANAGE_H
 
 #include <QObject>
-#include <QTime>
-#include <QCoreApplication>
-#include <QDir>
 #include <QDebug>
 #include <QJsonObject>
+#include <QTime>
+#include <QTimer>
 
-#define ConfigFilePath QCoreApplication::applicationDirPath() + QDir::separator() + "TaskConfig.json"
 
 struct TaskDetail
 {
@@ -19,12 +17,17 @@ struct TaskDetail
     QString     detail;      //<详情
     QTime       excuteTime;  //<任务执行时间
     int         delay;       //<休息时间
-    QString    unit;        //<时间单位
+    QString     unit;        //<时间单位
 
     TaskDetail():
         taskId(0),name(QString()),detail(QString()),excuteTime(QTime()),delay(-1),unit(TimeUnit::ms)
     {
 
+    }
+
+    inline bool operator==(const TaskDetail& other)
+    {
+        return other.taskId == this->taskId;
     }
 };
 Q_DECLARE_METATYPE(TaskDetail)
@@ -70,30 +73,31 @@ class TaskManage : public QObject
     Q_PROPERTY(TaskGroup m_taskGroup READ getTaskGroup WRITE setTaskGroup NOTIFY TaskGroupChanged)
 public:
     explicit TaskManage(QObject *parent = nullptr);
+    ~TaskManage();
 
 public:
-    ///
-    /// \brief loadFile 加载json文件
-    /// \param filePath 文件路径
-    /// \param taskGroup 任务引用
-    ///
     void loadFile(const QString &filePath , TaskGroup &taskGroup);
 
     void setTaskGroup(const TaskGroup& group);
     TaskGroup getTaskGroup();
 
-    Q_INVOKABLE QJsonObject getJsonObject(); //Json文件转换为QJsonObject，传递到QML
-    Q_INVOKABLE QString     getJsonString(); //Json文件转换为String，传递到QML解析
+    Q_INVOKABLE QJsonObject getJsonObject(); //Json文件转换为QJsonObject，传递到QML  弃用
+    Q_INVOKABLE QString     getJsonString(); //Json文件转换为String，传递到QML解析    弃用
+    Q_INVOKABLE void        excuteTask(); //执行任务
 
 signals:
     void TaskGroupChanged();
 
-signals:
+    void sig_SendTaskDetail( QString str);
+    void sig_SendTaskTaskName( QString str);
+    void sig_SendTaskExcuteTime( int seconds);
 
 private:
     TaskGroup   m_taskGroup;
     QJsonObject m_jsonObject;
     QString     m_jsonString;
+    QTimer      m_timer;
+    QList<TaskDetail> m_willExcuteTasks;
 };
 
 #endif // TASKMANAGE_H

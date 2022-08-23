@@ -5,6 +5,7 @@ import Qt.labs.platform 1.1
 import QtQml 2.12
 
 import TaskManage 1.0
+import SystemTray 1.0
 
 Window{
     id: root_window;
@@ -23,13 +24,39 @@ Window{
         Twelve = 12
     }
 
+    SystemTray{
+        id: _systemTrayIcon
+
+    }
+
     TaskManage{
         id: taskManager;
     }
 
+    Connections{
+        target: taskManager;
+         // @disable-check M16
+        onSig_SendTaskDetail:{
+            console.log(str);
+            _popupWindow.setText(str);
+        }
+         // @disable-check M16
+        onSig_SendTaskTaskName:{
+            console.log(str);
+        }
+         // @disable-check M16
+        onSig_SendTaskExcuteTime:{
+            console.log(seconds);
+
+            _popupWindow.totalTime = seconds;
+
+            _popupWindow.startTimer();
+            _popupWindow.showFullScreen();
+        }
+    }
+
     Window{
         id: _popupWindow;
-        title: "我是弹出窗口";
         opacity: 0.5;
         property string extraStr: "10";
         property int elapse: 0;
@@ -91,10 +118,6 @@ Window{
             case Qt.MidButton:
             {
                 console.log("鼠标中键退出" , Qt.formatDateTime( new Date , "yyyy-MM-dd hh:mm:ss") );
-
-                console.log(taskManager.m_taskGroup);
-                console.log(taskManager.getJsonObject());
-                console.log("=========================我是分割线==========================");
                 console.log(taskManager.getJsonString());
 
                 Qt.quit();
@@ -144,6 +167,7 @@ Window{
                 onTriggered: {
                     console.log( text );
                     console.log("点击了" , text , "菜单");
+                    _fontDialog.currentFont = lcdNumber.font;
                     _fontDialog.open();
                 }
             }
@@ -164,6 +188,7 @@ Window{
         onAccepted: {
             console.log("你选择的颜色是：" , _colorDialog.color);
             lcdNumber.color = _colorDialog.color;
+            AppInit.color = _colorDialog.color;
             _colorDialog.close();
         }
         onRejected: {
@@ -175,10 +200,12 @@ Window{
     FontDialog{
         id: _fontDialog;
         title: "选择字体";
+        currentFont.family: AppInit.font;
         onAccepted: {
 
             console.log("你选择的字体是：" , _fontDialog.font);
             lcdNumber.font = _fontDialog.font;
+            AppInit.font = _fontDialog.font;
 
             {
                 root_window.x = root_window.x;
@@ -195,9 +222,8 @@ Window{
 
     Text {
         id: lcdNumber;
-        font.pixelSize: 30
-        font.bold: true
-        color: 'green'
+        font: AppInit.font
+        color: AppInit.color
         anchors.centerIn: parent
         text: getCurrentDateTime();
     }
@@ -256,24 +282,6 @@ Window{
         return text;
     }
 
-    //休息时间
-    function excuteTask()
-    {
-        var date = new Date;
-        var hour = date.getHours();
-        var minute = date.getMinutes();
-        var second = date.getSeconds();
-
-        if(hour === 17 && minute === 40 && second === 0)
-        {
-            var content = ("大兄弟，该休息了...");
-            console.log(content);
-            _popupWindow.setText(content);
-            _popupWindow.startTimer();
-            _popupWindow.showFullScreen();
-        }
-    }
-
     Timer
     {
         id: timer;
@@ -281,9 +289,6 @@ Window{
         repeat: true;
         onTriggered: {
             lcdNumber.text = getCurDate().toString();
-
-            excuteTask();
-
             root_window.width = lcdNumber.contentWidth + 50;
             root_window.height = lcdNumber.contentHeight + 10;
         }

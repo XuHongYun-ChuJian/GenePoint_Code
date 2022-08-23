@@ -6,10 +6,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+        SystemTray.cpp \
         TaskManage.cpp \
         main.cpp
 
-RESOURCES += qml.qrc
+RESOURCES += qml.qrc \
+    image.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
@@ -25,4 +27,10 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 QMAKE_POST_LINK += cp -rf $$PWD/TaskConfig.json $$OUT_PWD/TaskConfig.json
 
 HEADERS += \
+    SystemTray.h \
     TaskManage.h
+
+INCLUDEPATH += $$PWD/AppInit
+DEPENDPATH += $$PWD/AppInit
+
+include($$PWD/AppInit/AppInit.pri)
